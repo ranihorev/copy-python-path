@@ -6,4 +6,8 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## [Unreleased]
 
+### Added
+- New configuration option `copyPythonPath.omitRootPath` to omit specific root paths from the dotted path
+
+## [0.6.9]
 - Initial release

@@ -26,6 +26,15 @@ If you want to add the workspace folder name to the beginning of the dotted path
   "copyPythonPath.addModuleRootName": true // default false
 }
 ```
+
+If you want to omit a specific root path from the dotted path (e.g., if your path is `root.app.folder1.classFoo` and you want to omit `root.app`), add the following setting:
+
+```
+{
+  "copyPythonPath.omitRootPath": "root.app" // default empty string
+}
+```
+
 ## Notice
 - This extension works only with python3 files.
 

@@ -88,6 +88,11 @@
 						"type": "boolean",
 						"default": false,
 						"description": "Insert module root name at the beginning of Dotted path."
+					},
+					"copyPythonPath.omitRootPath": {
+						"type": "string",
+						"default": "",
+						"description": "Root path to omit from the dotted path (e.g. 'root.app' will omit 'root.app' from the path)"
 					}
 				}
 			}
