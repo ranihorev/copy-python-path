@@ -1,6 +1,8 @@
 import * as vscode from "vscode";
 import { getRelatedDefinedSymbols } from "./utils/getRelatedDefinedSymbols";
 import { getCurrentFileDottedPath } from "./utils/getCurrentFileDottedPath";
+import { getImportedSymbolMap } from "./utils/getImportedSymbolMap";
+import { getSymbolAtPosition } from "./utils/getSymbolAtPosition";
 
 export function activate(context: vscode.ExtensionContext) {
   const disposable = vscode.commands.registerCommand("copy-python-path.copy-python-path", async () => {
@@ -41,11 +43,37 @@ export function activate(context: vscode.ExtensionContext) {
       });
 
       try {
-        // get related defined symbols from current file and current cursor position
-        const text = vscode.window.activeTextEditor!.document.getText();
-        const currentLine = vscode.window.activeTextEditor!.selection.active.line;
+        // Get the full text of the document
+        const text = editor.document.getText();
+
+        // Get the current cursor position
+        const position = editor.selection.active;
+        const currentLine = position.line;
+        const currentChar = position.character;
+
+        // Get the text of the current line
+        const lineText = editor.document.lineAt(currentLine).text;
+
+        // Try to find a symbol at the current cursor position
+        const symbolAtCursor = getSymbolAtPosition(lineText, currentChar);
+
+        if (symbolAtCursor) {
+          // Check if the symbol is an imported symbol
+          const importedSymbolMap = getImportedSymbolMap(text);
+          const importedPath = importedSymbolMap.get(symbolAtCursor);
+
+          if (importedPath) {
+            // Found an imported symbol, copy its full path
+            await vscode.env.clipboard.writeText(importedPath);
+            vscode.window.showInformationMessage(`Copied imported symbol: ${importedPath}`);
+            return;
+          }
+        }
+
+        // Fall back to the original behavior if we didn't find an imported symbol
         const definedSymbols = getRelatedDefinedSymbols(text, currentLine);
         const finalOutPath = [currentFileDottedPath, ...definedSymbols].join(".");
+
         // copy python dotted path to clipboard
         await vscode.env.clipboard.writeText(finalOutPath);
         vscode.window.showInformationMessage(["Copied to clipboard", finalOutPath].join(": "));
@@ -80,7 +108,6 @@ export function activate(context: vscode.ExtensionContext) {
       if (!folder) {
         vscode.window.showErrorMessage("No workspace folder is opened. only use this command in a workspace.");
         return;
-        // text = `$(alert) <outside workspace> → ${basename(resource.fsPath)}`;
       }
 
       const config = vscode.workspace.getConfiguration("copyPythonPath");
@@ -96,12 +123,49 @@ export function activate(context: vscode.ExtensionContext) {
       });
 
       try {
-        // get related defined symbols from current file and current cursor position
-        const text = vscode.window.activeTextEditor!.document.getText();
-        const currentLine = vscode.window.activeTextEditor!.selection.active.line;
+        // Get the full text of the document
+        const text = editor.document.getText();
+
+        // Get the current cursor position
+        const position = editor.selection.active;
+        const currentLine = position.line;
+        const currentChar = position.character;
+
+        // Get the text of the current line
+        const lineText = editor.document.lineAt(currentLine).text;
+
+        // Try to find a symbol at the current cursor position
+        const symbolAtCursor = getSymbolAtPosition(lineText, currentChar);
+
+        if (symbolAtCursor) {
+          // Check if the symbol is an imported symbol
+          const importedSymbolMap = getImportedSymbolMap(text);
+
+          const importedPath = importedSymbolMap.get(symbolAtCursor);
+
+          if (importedPath) {
+            // Generate import statement for the imported symbol
+            const lastDotIndex = importedPath.lastIndexOf(".");
+            if (lastDotIndex !== -1) {
+              const modulePath = importedPath.substring(0, lastDotIndex);
+              const symbolName = importedPath.substring(lastDotIndex + 1);
+              const importStatement = `from ${modulePath} import ${symbolName}`;
+              await vscode.env.clipboard.writeText(importStatement);
+              vscode.window.showInformationMessage(`Copied import statement: ${importStatement}`);
+              return;
+            } else {
+              // Simple module with no dots
+              const importStatement = `import ${importedPath}`;
+              await vscode.env.clipboard.writeText(importStatement);
+              vscode.window.showInformationMessage(`Copied import statement: ${importStatement}`);
+              return;
+            }
+          }
+        }
+
+        // Fall back to the original behavior
         const definedSymbols = getRelatedDefinedSymbols(text, currentLine);
-        const finalOutPath = currentFileDottedPath;
-        const finalImportStatement = `from ${finalOutPath} import ${definedSymbols.join(", ")}`;
+        const finalImportStatement = `from ${currentFileDottedPath} import ${definedSymbols.join(", ")}`;
 
         // copy python dotted path to clipboard
         await vscode.env.clipboard.writeText(finalImportStatement);
